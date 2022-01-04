@@ -20,9 +20,14 @@ path = "tests/01-parse.rs"
 name = "optional"
 path = "tests/06-optional-field.rs"
 
+[[test]]
+name = "repeated"
+path = "tests/07-repeated-field.rs"
+
 [dev-dependencies]
 trybuild = { version = "1.0.49", features = ["diff"] }
 
 [dependencies]
-syn = { version = "1.0", features = ["extra-traits"] }
+syn = { version = "1.0", features = ["extra-traits", "derive"] }
 quote = "1.0"
+proc-macro2 = "1.0.36"

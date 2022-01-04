@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 // Some fields may not always need to be specified. Typically these would be
 // represented as Option<T> in the struct being built.
 //
