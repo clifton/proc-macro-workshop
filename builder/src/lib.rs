@@ -42,7 +42,6 @@ fn get_each_metadata(field: &syn::Field) -> Option<(Ident, syn::Type)> {
                 assert!(group.delimiter() == Delimiter::Parenthesis);
                 let tokens = group.stream().into_iter().collect::<Vec<_>>();
                 assert!(tokens.len() == 3);
-                eprintln!("1 {:#?}", group);
                 if let proc_macro2::TokenTree::Ident(ident) = &tokens[0] {
                     if format!("{}", &ident) != "each" {
                         panic!("{} must equal 'each'", &ident);
@@ -113,8 +112,14 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
     let builder_field_defaults = fields.iter().map(|field| {
         let field_name = field.ident.clone().unwrap();
-        quote! {
-            #field_name: None,
+        if let Some(_) = get_each_metadata(field) {
+            quote! {
+                #field_name: Some(Vec::new()),
+            }
+        } else {
+            quote! {
+                #field_name: None,
+            }
         }
     });
 
@@ -136,10 +141,8 @@ pub fn derive(input: TokenStream) -> TokenStream {
             let each_fn = if let Some((each_ident, each_ty)) = get_each_metadata(field) {
                 let each_fn_dec = quote! {
                     pub fn #each_ident(&mut self, #each_ident: #each_ty) -> &mut #builder_ident {
-                        if self.#field_name == None {
-                            self.#field_name = Vec::new();
-                        }
-                        self.#field_name.unwrap().push(#each_ident);
+                        let mut v = self.#field_name.get_or_insert(Vec::new());
+                        v.push(#each_ident);
                         self
                     }
                 };
@@ -164,13 +167,19 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let builder_build_fields = fields.iter().map(|field| {
         let field_name = field.ident.clone().unwrap();
         let error_msg = format!("{} not set!", field_name);
-        if is_type(&field.ty, "Option") {
+        if let Some(_) = get_each_metadata(field) {
             quote! {
-                #field_name: self.#field_name.clone(),
+                #field_name: self.#field_name.clone().unwrap(),
             }
         } else {
-            quote! {
-                #field_name: self.#field_name.clone().ok_or(#error_msg)?,
+            if is_type(&field.ty, "Option") {
+                quote! {
+                    #field_name: self.#field_name.clone(),
+                }
+            } else {
+                quote! {
+                    #field_name: self.#field_name.clone().ok_or(#error_msg)?,
+                }
             }
         }
     });
