@@ -44,7 +44,7 @@ fn get_each_metadata(field: &syn::Field) -> Option<(Ident, syn::Type)> {
                 assert!(tokens.len() == 3);
                 if let proc_macro2::TokenTree::Ident(ident) = &tokens[0] {
                     if format!("{}", &ident) != "each" {
-                        panic!("{} must equal 'each'", &ident);
+                        panic!("expected `builder(each = \"...\")`");
                     }
                     if !is_type(&field.ty, "Vec") {
                         panic!("expected Vec type for 'each'");
@@ -114,11 +114,11 @@ pub fn derive(input: TokenStream) -> TokenStream {
         let field_name = field.ident.clone().unwrap();
         if let Some(_) = get_each_metadata(field) {
             quote! {
-                #field_name: Some(Vec::new()),
+                #field_name: std::option::Option::Some(Vec::new()),
             }
         } else {
             quote! {
-                #field_name: None,
+                #field_name: std::option::Option::None,
             }
         }
     });
@@ -130,18 +130,18 @@ pub fn derive(input: TokenStream) -> TokenStream {
             let inner_type = unwrap_type(field_type, "Option");
             quote! {
                 pub fn #field_name(&mut self, #field_name: #inner_type) -> &mut #builder_ident {
-                    self.#field_name = Some(#field_name);
+                    self.#field_name = std::option::Option::Some(#field_name);
                     self
                 }
             }
         } else {
             let foo = Some(vec![1, 2, 3]);
-            foo.unwrap_or(Vec::new()).push(3);
+            foo.unwrap_or(std::vec::Vec::new()).push(3);
 
             let each_fn = if let Some((each_ident, each_ty)) = get_each_metadata(field) {
                 let each_fn_dec = quote! {
                     pub fn #each_ident(&mut self, #each_ident: #each_ty) -> &mut #builder_ident {
-                        let mut v = self.#field_name.get_or_insert(Vec::new());
+                        let mut v = self.#field_name.get_or_insert(std::vec::Vec::new());
                         v.push(#each_ident);
                         self
                     }
@@ -196,7 +196,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
             }
         }
         impl #builder_ident {
-            pub fn build(&mut self) -> Result<#name, Box<dyn std::error::Error>> {
+            pub fn build(&mut self) -> std::result::Result<#name, std::boxed::Box<dyn std::error::Error>> {
                 Ok (
                     #name {
                         #(#builder_build_fields)*
