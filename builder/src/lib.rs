@@ -27,7 +27,7 @@ fn unwrap_type(ty: &syn::Type, unwrap_ty: &str) -> syn::Type {
 }
 
 fn get_each_metadata(field: &syn::Field) -> Option<(Ident, syn::Type)> {
-    if field.attrs.len() == 0 {
+    if field.attrs.is_empty() {
         return None;
     } else if field.attrs.len() > 1 {
         panic!("invalid number of attrs")
@@ -38,7 +38,7 @@ fn get_each_metadata(field: &syn::Field) -> Option<(Ident, syn::Type)> {
             if tokens.len() != 1 {
                 unreachable!()
             }
-            if let Some(TokenTree::Group(group)) = tokens.first().clone() {
+            if let Some(TokenTree::Group(group)) = tokens.first() {
                 assert!(group.delimiter() == Delimiter::Parenthesis);
                 let tokens = group.stream().into_iter().collect::<Vec<_>>();
                 assert!(tokens.len() == 3);
@@ -112,7 +112,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
     let builder_field_defaults = fields.iter().map(|field| {
         let field_name = field.ident.clone().unwrap();
-        if let Some(_) = get_each_metadata(field) {
+        if get_each_metadata(field).is_some() {
             quote! {
                 #field_name: std::option::Option::Some(Vec::new()),
             }
@@ -135,9 +135,6 @@ pub fn derive(input: TokenStream) -> TokenStream {
                 }
             }
         } else {
-            let foo = Some(vec![1, 2, 3]);
-            foo.unwrap_or(std::vec::Vec::new()).push(3);
-
             let each_fn = if let Some((each_ident, each_ty)) = get_each_metadata(field) {
                 let each_fn_dec = quote! {
                     pub fn #each_ident(&mut self, #each_ident: #each_ty) -> &mut #builder_ident {
@@ -146,7 +143,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
                         self
                     }
                 };
-                if field_name.to_string() == each_ident.to_string() {
+                if *field_name == each_ident {
                     return each_fn_dec;
                 }
                 each_fn_dec
@@ -167,19 +164,17 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let builder_build_fields = fields.iter().map(|field| {
         let field_name = field.ident.clone().unwrap();
         let error_msg = format!("{} not set!", field_name);
-        if let Some(_) = get_each_metadata(field) {
+        if get_each_metadata(field).is_some() {
             quote! {
                 #field_name: self.#field_name.clone().unwrap(),
             }
+        } else if is_type(&field.ty, "Option") {
+            quote! {
+                #field_name: self.#field_name.clone(),
+            }
         } else {
-            if is_type(&field.ty, "Option") {
-                quote! {
-                    #field_name: self.#field_name.clone(),
-                }
-            } else {
-                quote! {
-                    #field_name: self.#field_name.clone().ok_or(#error_msg)?,
-                }
+            quote! {
+                #field_name: self.#field_name.clone().ok_or(#error_msg)?,
             }
         }
     });
