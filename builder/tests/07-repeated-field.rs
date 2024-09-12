@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // The std::process::Command builder handles args in a way that is potentially
 // more convenient than passing a full vector of args to the builder all at
 // once.

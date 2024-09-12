@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // Generate a `build` method to go from builder to original struct.
 //
 // This method should require that every one of the fields has been explicitly

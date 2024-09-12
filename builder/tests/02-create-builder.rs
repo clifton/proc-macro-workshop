@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // Have the macro produce a struct for the builder state, and a `builder`
 // function that creates an empty instance of the builder.
 //

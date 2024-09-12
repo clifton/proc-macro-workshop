@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // Generate methods on the builder for setting a value of each of the struct
 // fields.
 //
